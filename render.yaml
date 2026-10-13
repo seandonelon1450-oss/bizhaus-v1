@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: bizhaus-v1
+    runtime: node
+    buildCommand: npm ci
+    startCommand: node server.js
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set in the Render dashboard (never in this file):
+      # BIZHAUS_ADMIN_TOKEN, ANALYTICS_TOKEN, DATABASE_URL,
+      # TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER,
+      # MCR_LIVE (true only after A2P 10DLC approval + Sean's go-ahead),
+      # STRIPE_* (not until webhook + test charge pass)

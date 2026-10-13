@@ -1,0 +1,1 @@
+{"dependencies":{"express":"^4.19.2"},"description":"BIZHAUS pilot — demo-call experience: VESTA answers, KIARA books and drafts the follow-through for owner Approve/Edit/Skip. Draft-only; nothing sends.","engines":{"node":">=18"},"license":"UNLICENSED","main":"server.js","name":"bizhaus-pilot","private":true,"scripts":{"start":"node server.js"},"version":"1.0.0"}

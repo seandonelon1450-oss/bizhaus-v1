@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Call All American Exteriors — VESTA Answers | BIZHAUS Pilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/pilot.css">
+</head>
+<body>
+<div class="demo-banner">Pilot demo — you are calling a walkthrough, not the real business. Nothing is sent.</div>
+<div class="wrap">
+  <header class="site">
+    <div class="wordmark">All American Exteriors<small>Gutters, guards &amp; cleaning · Demo line</small></div>
+    <span class="ribbon">Answered by VESTA™</span>
+  </header>
+
+  <h1 style="font-size:clamp(1.7rem,3.6vw,2.3rem)">It's 9 PM. The crew is home. Call anyway.</h1>
+  <p class="lede">Tap <strong>Call</strong> and talk to VESTA — use your voice where your browser allows it,
+  or type. She'll take your name, the job, and a time, and book you in. Then open the
+  <a href="/summary.html">owner's morning summary</a> to see what KIARA drafted from your call.</p>
+
+  <div class="phonebox">
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">VESTA is on duty — tap Call</span></div>
+    <div class="log" id="log" aria-live="polite"></div>
+    <div class="controls">
+      <button class="btn" id="callBtn">Call</button>
+      <input type="text" id="say" placeholder="…or type what you'd say" disabled autocomplete="off">
+      <button class="btn ghost" id="micBtn" title="Speak instead of typing" disabled>🎙 Speak</button>
+      <button class="btn ghost" id="sendBtn" disabled>Send</button>
+    </div>
+    <div class="chips" id="chips" style="display:none">
+      <button class="chip" data-say="I need my gutters cleaned">“I need my gutters cleaned”</button>
+      <button class="chip" data-say="My name is Dana Miller">“My name is Dana Miller”</button>
+      <button class="chip" data-say="4213 St Charles Avenue">an address</button>
+      <button class="chip" data-say="504 555 0147">a phone number</button>
+      <button class="chip" data-say="Two works for me">“Two works for me”</button>
+      <button class="chip" data-say="Yes, book it">“Yes, book it”</button>
+    </div>
+    <div id="booked"></div>
+  </div>
+
+  <p style="color:var(--ink-soft);font-size:14.5px">Voice in/out uses your browser's built-in speech tools — free, nothing installed.
+  The production line answers a real phone number; the conversation you hear is the same one VESTA runs there.</p>
+
+  <footer>
+    <p>Powered by Arbor · The Arbor Group · She owns her data.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var callId = null, speaking = false;
+  var log = document.getElementById('log'), dot = document.getElementById('dot'),
+      statusText = document.getElementById('statusText'), callBtn = document.getElementById('callBtn'),
+      say = document.getElementById('say'), sendBtn = document.getElementById('sendBtn'),
+      micBtn = document.getElementById('micBtn'), chips = document.getElementById('chips'),
+      booked = document.getElementById('booked');
+
+  function bubble(who, text){
+    var d = document.createElement('div');
+    d.className = 'bubble ' + who;
+    var w = document.createElement('span'); w.className = 'who'; w.textContent = who === 'vesta' ? 'VESTA' : 'You';
+    d.appendChild(w); d.appendChild(document.createTextNode(text));
+    log.appendChild(d); log.scrollTop = log.scrollHeight;
+  }
+
+  /* VESTA's voice — browser speech synthesis; prefer a warm en-US female voice. */
+  function speak(text){
+    if (!('speechSynthesis' in window)) return;
+    try {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      var voices = speechSynthesis.getVoices().filter(function(v){ return /^en[-_]US/i.test(v.lang); });
+      var pick = voices.filter(function(v){ return /female|samantha|zira|aria|jenny|google us english/i.test(v.name); })[0] || voices[0];
+      if (pick) u.voice = pick;
+      u.rate = 1.0; u.pitch = 1.05;
+      speechSynthesis.speak(u);
+    } catch(e) { /* voice is an enhancement; the call still works as text */ }
+  }
+  if ('speechSynthesis' in window) speechSynthesis.getVoices();
+
+  /* Caller's voice — following the vike-v1 SpeechRecognition pattern. */
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var recog = null;
+  if (SR) {
+    recog = new SR(); recog.lang = 'en-US'; recog.interimResults = false; recog.maxAlternatives = 1;
+    recog.onresult = function(ev){ say.value = ev.results[0][0].transcript; sendSaying(); };
+    recog.onend = function(){ micBtn.textContent = '🎙 Speak'; };
+    recog.onerror = function(){ micBtn.textContent = '🎙 Speak'; };
+  } else { micBtn.style.display = 'none'; }
+
+  function setLive(on){
+    dot.className = 'dot' + (on ? ' on' : '');
+    say.disabled = sendBtn.disabled = !on;
+    micBtn.disabled = !on;
+    chips.style.display = on ? 'flex' : 'none';
+    callBtn.textContent = on ? 'End call' : 'Call';
+    statusText.textContent = on ? 'On a call with VESTA — she answers 24/7' : 'VESTA is on duty — tap Call';
+  }
+
+  callBtn.addEventListener('click', function(){
+    if (callId) { callId = null; setLive(false); bubble('vesta', 'Call ended. Call again any time — I\'ll be here.'); return; }
+    fetch('/api/call/start', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        callId = j.callId; setLive(true);
+        bubble('vesta', j.greeting); speak(j.greeting);
+        say.focus();
+      });
+  });
+
+  function sendSaying(){
+    var text = say.value.trim(); if (!text || !callId) return;
+    say.value = ''; bubble('caller', text);
+    fetch('/api/call/' + callId + '/say', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text:text }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j.ok) return;
+        bubble('vesta', j.reply); speak(j.reply);
+        if (j.booking) showBooked(j.booking);
+      });
+  }
+  sendBtn.addEventListener('click', sendSaying);
+  say.addEventListener('keydown', function(e){ if (e.key === 'Enter') sendSaying(); });
+  micBtn.addEventListener('click', function(){ if (recog) { micBtn.textContent = '● Listening…'; try { recog.start(); } catch(e){} } });
+  chips.addEventListener('click', function(e){
+    var b = e.target.closest('.chip'); if (!b) return;
+    say.value = b.getAttribute('data-say'); sendSaying();
+  });
+
+  function showBooked(b){
+    booked.innerHTML = '';
+    var d = document.createElement('div'); d.className = 'success';
+    d.innerHTML = '<h3>Booked — the loop is closed.</h3>' +
+      '<p><strong>' + b.service + '</strong> for ' + b.name + ' · ' + b.slot + '<br>' +
+      'Confirmation drafted to ' + b.phone + '. KIARA also drafted your day-before reminder. ' +
+      'The owner approves both in the <a href="/summary.html">morning summary</a> — nothing goes out without the owner.</p>';
+    booked.appendChild(d);
+  }
+})();
+</script>
+</body>
+</html>

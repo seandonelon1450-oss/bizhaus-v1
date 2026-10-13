@@ -1,0 +1,17 @@
+# BIZHAUS pilot — deploy as a SECOND service from the bizhaus-v1 repo.
+# In the Render dashboard: New Web Service -> same repo -> Root Directory: pilot
+# (or create a Blueprint and point it at this file). Free tier is fine for
+# the walkthrough; see PILOT-BUILD.md for why the live pilot wants Starter.
+services:
+  - type: web
+    name: bizhaus-pilot
+    runtime: node
+    rootDir: pilot
+    buildCommand: npm ci
+    startCommand: node server.js
+    autoDeploy: true
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+    # No secrets. No keys. This prototype sends nothing.

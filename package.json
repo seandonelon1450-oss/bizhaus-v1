@@ -1,0 +1,1 @@
+{"dependencies":{"express":"^4.19.2","pg":"^8.13.1"},"description":"BIZHAUS V1 — the premium SMB AI-migration concierge. AI readiness assessment, automation opportunity roadmaps, and booking across founding consultants.","engines":{"node":">=18"},"license":"UNLICENSED","main":"server.js","name":"bizhaus-v1","private":true,"scripts":{"start":"node server.js"},"version":"1.0.0"}

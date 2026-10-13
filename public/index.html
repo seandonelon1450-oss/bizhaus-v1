@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" data-trade="bizhaus">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BIZHAUS™ — Never lose a job to a missed call.</title>
+<meta name="description" content="Websites + missed-call text-back for local businesses. Powered by Arbor.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/design.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" data-chrome="header"></header>
+
+<main id="main">
+  <!-- hero -->
+  <section class="hero">
+    <div class="container center">
+      <div data-s="example"></div>
+      <div data-s="eyebrow"></div>
+      <h1 class="display" data-s="headline"></h1>
+      <p class="lede" data-s="sub"></p>
+      <div class="btn-row" data-s="cta"></div>
+      <div data-s="phone" style="margin-top:24px"></div>
+      <div class="arch-media" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- services -->
+  <section class="block" style="background:var(--white);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="container">
+      <h2 class="h2 center" style="text-align:center">What you get</h2>
+      <div class="grid grid-3" style="margin-top:40px" data-s="services"></div>
+    </div>
+  </section>
+
+  <!-- before / after (slices mask; trade JSON decides) -->
+  <section class="block" data-s="beforeafter"></section>
+
+  <!-- service area -->
+  <section class="block">
+    <div class="container reading" data-s="area"></div>
+  </section>
+
+  <!-- reviews (honest until real) -->
+  <section class="block" style="background:var(--white);border-top:1px solid var(--line);border-bottom:1px solid var(--line)" data-s="reviews"></section>
+
+  <!-- missed-call text-back -->
+  <section class="block">
+    <div class="container" data-s="mcr"></div>
+  </section>
+
+  <!-- free estimate / booking -->
+  <section class="block" id="estimate" style="background:var(--accent-tint)">
+    <div class="container reading">
+      <h2 class="h2">Get a free estimate</h2>
+      <p class="lede">Leave your name and number. A real person gets back to you — no bots taking orders.</p>
+      <form id="booking-form">
+        <div class="field"><label for="bf-name">Your name</label><input id="bf-name" name="name" required autocomplete="name"></div>
+        <div class="field"><label for="bf-phone">Phone number</label><input id="bf-phone" name="phone" type="tel" required autocomplete="tel"></div>
+        <div class="field"><label for="bf-detail">What do you need? (optional)</label><textarea id="bf-detail" name="detail" rows="3"></textarea></div>
+        <p class="form-note" id="booking-note" role="status"></p>
+        <button class="btn btn-primary" type="submit">Request my free estimate</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- pricing -->
+  <section class="block" data-s="pricing"></section>
+
+  <!-- faq -->
+  <section class="block">
+    <div class="container reading" data-s="faq"></div>
+  </section>
+
+  <!-- data charter -->
+  <section class="block" style="background:var(--white);border-top:1px solid var(--line)">
+    <div class="container reading" data-chrome="charter"></div>
+  </section>
+</main>
+
+<footer class="site-footer" data-chrome="footer"></footer>
+<script src="/brand.js"></script>
+</body>
+</html>

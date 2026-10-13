@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" data-trade="bizhaus">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Owner dashboard — BIZHAUS™</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/design.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" data-chrome="header"></header>
+
+<main id="main">
+  <section class="hero" style="padding-bottom:48px">
+    <div class="container">
+      <span class="label">Owner dashboard</span>
+      <h1 class="h1">Missed-Call Rescue</h1>
+      <p class="lede" id="live-note"></p>
+    </div>
+  </section>
+
+  <section class="block" style="padding-top:0">
+    <div class="container">
+      <div id="gate" class="token-gate card">
+        <h2 class="h3">Sign in</h2>
+        <p>Enter your dashboard access token.</p>
+        <div class="field"><label for="gate-token">Access token</label><input id="gate-token" type="password" autocomplete="off"></div>
+        <p class="form-note" id="gate-note" role="status"></p>
+        <button class="btn btn-primary" type="button" id="gate-btn">Open dashboard</button>
+      </div>
+
+      <div id="dash" style="display:none">
+        <div class="dash-tabs" role="tablist">
+          <button class="dash-tab active" data-tab="inbox" role="tab">Inbox</button>
+          <button class="dash-tab" data-tab="calls" role="tab">Calls</button>
+          <button class="dash-tab" data-tab="bookings" role="tab">Bookings</button>
+          <button class="dash-tab" data-tab="settings" role="tab">Settings</button>
+          <button class="dash-tab" data-tab="summary" role="tab">Daily summary</button>
+        </div>
+
+        <div class="dash-pane active" id="pane-inbox"></div>
+        <div class="dash-pane" id="pane-calls"></div>
+        <div class="dash-pane" id="pane-bookings"></div>
+        <div class="dash-pane" id="pane-settings"></div>
+        <div class="dash-pane" id="pane-summary"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer" data-chrome="footer"></footer>
+<script src="/brand.js"></script>
+<script>
+(function () {
+  'use strict';
+  var token = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function api(method, path, body) {
+    return fetch(path + (path.indexOf('?') >= 0 ? '&' : '?') + 'token=' + encodeURIComponent(token), {
+      method: method, headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) { if (!r.ok) throw new Error('request failed'); return r.json(); });
+  }
+
+  document.getElementById('gate-btn').addEventListener('click', function () {
+    token = document.getElementById('gate-token').value.trim();
+    if (!token) return;
+    api('GET', '/api/admin/settings').then(function (j) {
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('dash').style.display = '';
+      document.getElementById('live-note').textContent = j.mcrLive
+        ? 'Live: texts are being sent.'
+        : 'Not live yet: texts are logged as \u201cwould send\u201d and nothing goes out.';
+      loadInbox(); loadCalls(); loadBookings(); loadSettings(); loadSummary();
+    }).catch(function () {
+      document.getElementById('gate-note').textContent = 'That token didn\u2019t work. Try again.';
+    });
+  });
+
+  document.querySelectorAll('.dash-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.dash-tab').forEach(function (t) { t.classList.remove('active'); });
+      document.querySelectorAll('.dash-pane').forEach(function (p) { p.classList.remove('active'); });
+      tab.classList.add('active');
+      document.getElementById('pane-' + tab.getAttribute('data-tab')).classList.add('active');
+    });
+  });
+
+  function loadInbox() {
+    api('GET', '/api/admin/inbox').then(function (j) {
+      var el = document.getElementById('pane-inbox');
+      if (!j.texts.length) { el.innerHTML = '<p class="lede">No conversations yet.</p>'; return; }
+      el.innerHTML = j.texts.map(function (t) {
+        var dir = t.direction === 'in' ? 'Them' : (t.kind === 'owner' ? 'You' : 'Auto');
+        return '<div class="msg ' + (t.direction === 'out' ? 'out' : '') + '">' +
+          '<div class="meta">' + dir + ' · ' + esc(t.phone) + ' · ' + esc(t.ts) + (t.kind && t.kind.indexOf('simulated') >= 0 ? ' · not sent (not live)' : '') + '</div>' +
+          '<div>' + esc(t.body) + '</div>' +
+          '<div class="btn-row" style="margin-top:12px">' +
+          '<button class="btn btn-secondary" style="min-height:44px;padding:8px 16px;font-size:15px" data-act="takeover" data-phone="' + esc(t.phone) + '">Take over</button>' +
+          '<button class="btn btn-secondary" style="min-height:44px;padding:8px 16px;font-size:15px" data-act="resume" data-phone="' + esc(t.phone) + '">Resume auto</button>' +
+          '</div></div>';
+      }).join('') +
+      '<div class="card" style="margin-top:24px"><h3 class="h4">Reply as owner</h3>' +
+      '<div class="field"><label for="rep-phone">Phone</label><input id="rep-phone" placeholder="+15550102030"></div>' +
+      '<div class="field"><label for="rep-body">Message</label><textarea id="rep-body" rows="2"></textarea></div>' +
+      '<button class="btn btn-primary" id="rep-send" type="button">Send</button>' +
+      '<p class="form-note" id="rep-note"></p></div>';
+      bindInbox(el);
+    });
+  }
+  function bindInbox(el) {
+    el.querySelectorAll('[data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var act = b.getAttribute('data-act'), phone = b.getAttribute('data-phone');
+        api('POST', '/api/admin/' + act, { phone: phone }).then(loadInbox);
+      });
+    });
+    var send = el.querySelector('#rep-send');
+    if (send) send.addEventListener('click', function () {
+      api('POST', '/api/admin/reply', {
+        phone: el.querySelector('#rep-phone').value, body: el.querySelector('#rep-body').value
+      }).then(function (j) {
+        el.querySelector('#rep-note').textContent = j.sent ? 'Sent.' : 'Logged as \u201cwould send\u201d (not live).';
+        loadInbox();
+      }).catch(function () { el.querySelector('#rep-note').textContent = 'Send failed.'; });
+    });
+  }
+
+  function loadCalls() {
+    api('GET', '/api/admin/calls').then(function (j) {
+      document.getElementById('pane-calls').innerHTML = j.calls.length
+        ? j.calls.map(function (c) {
+            return '<div class="msg"><div class="meta">' + esc(c.ts) + '</div><div>Missed call from ' + esc(c.phone) + '</div></div>';
+          }).join('')
+        : '<p class="lede">No missed calls yet.</p>';
+    });
+  }
+  function loadBookings() {
+    api('GET', '/api/admin/bookings').then(function (j) {
+      document.getElementById('pane-bookings').innerHTML = j.bookings.length
+        ? j.bookings.map(function (b) {
+            return '<div class="msg"><div class="meta">' + esc(b.ts) + ' · ' + esc(b.trade || '') + '</div>' +
+              '<div><strong>' + esc(b.name) + '</strong> — ' + esc(b.phone) + '</div>' +
+              (b.detail ? '<div>' + esc(b.detail) + '</div>' : '') + '</div>';
+          }).join('')
+        : '<p class="lede">No booking requests yet.</p>';
+    });
+  }
+  function loadSettings() {
+    api('GET', '/api/admin/settings').then(function (j) {
+      var b = j.business || {};
+      var el = document.getElementById('pane-settings');
+      el.innerHTML = '<div class="card"><h3 class="h4">Business info — replies are answered ONLY from this</h3>' +
+        ['businessName', 'ownerName', 'phone', 'bookingLink', 'hours', 'area', 'priceRanges'].map(function (k) {
+          return '<div class="field"><label for="set-' + k + '">' + k + '</label>' +
+            '<input id="set-' + k + '" value="' + esc(b[k] || '') + '"></div>';
+        }).join('') +
+        '<button class="btn btn-primary" id="set-save" type="button">Save</button>' +
+        '<p class="form-note" id="set-note"></p></div>';
+      el.querySelector('#set-save').addEventListener('click', function () {
+        var nb = { faqs: b.faqs || [] };
+        ['businessName', 'ownerName', 'phone', 'bookingLink', 'hours', 'area', 'priceRanges'].forEach(function (k) {
+          nb[k] = el.querySelector('#set-' + k).value;
+        });
+        api('PUT', '/api/admin/settings', { business: nb }).then(function () {
+          el.querySelector('#set-note').textContent = 'Saved.';
+        });
+      });
+    });
+  }
+  function loadSummary() {
+    api('GET', '/api/admin/summary').then(function (j) {
+      document.getElementById('pane-summary').innerHTML =
+        '<div class="card"><h3 class="h4">Last 24 hours</h3><pre style="white-space:pre-wrap;font:inherit">' +
+        esc(j.summary) + '</pre></div>';
+    });
+  }
+})();
+</script>
+</body>
+</html>

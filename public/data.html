@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" data-trade="bizhaus">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your data — BIZHAUS™</title>
+<meta name="description" content="The Arbor data charter, word for word. Export and delete your data in one tap.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/design.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" data-chrome="header"></header>
+
+<main id="main">
+  <section class="hero">
+    <div class="container reading">
+      <span class="label">Your data</span>
+      <h1 class="h1">You own your data</h1>
+      <p class="lede">The 10-point data charter, word for word. These tools are for the business owner — you'll need your dashboard access token.</p>
+      <div data-chrome="charter"></div>
+      <div class="btn-row" style="margin-top:40px">
+        <button class="btn btn-primary" type="button" id="export-btn">Export my data</button>
+        <button class="btn btn-secondary" type="button" id="delete-btn">Delete my data</button>
+      </div>
+      <p class="form-note" id="data-note" role="status" style="margin-top:16px"></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer" data-chrome="footer"></footer>
+<script src="/brand.js"></script>
+<script>
+(function () {
+  function token() {
+    var t = null;
+    try { t = sessionStorage.getItem('bizhaus-admin-token'); } catch (e) {}
+    if (!t) {
+      t = prompt('Owner access token (from your dashboard):');
+      if (t) { try { sessionStorage.setItem('bizhaus-admin-token', t); } catch (e) {} }
+    }
+    return t;
+  }
+  function note(msg) { document.getElementById('data-note').textContent = msg; }
+  document.getElementById('export-btn').addEventListener('click', function () {
+    var t = token(); if (!t) return;
+    fetch('/api/data/export?token=' + encodeURIComponent(t))
+      .then(function (r) { if (!r.ok) throw new Error('denied'); return r.json(); })
+      .then(function (j) {
+        var blob = new Blob([JSON.stringify(j, null, 2)], { type: 'application/json' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = 'bizhaus-data-export.json'; a.click();
+        note('Exported. The file is on your device now.');
+      })
+      .catch(function () { note('Export didn\u2019t work — check your token and try again.'); });
+  });
+  document.getElementById('delete-btn').addEventListener('click', function () {
+    var t = token(); if (!t) return;
+    if (!confirm('Delete everything this site holds about your business\u2019s calls, texts, and bookings? This can\u2019t be undone.')) return;
+    if (!confirm('Last check — really delete it all?')) return;
+    fetch('/api/data/delete?token=' + encodeURIComponent(t), { method: 'POST' })
+      .then(function (r) { if (!r.ok) throw new Error('denied'); return r.json(); })
+      .then(function () { note('Deleted. Everything is gone from the live system.'); })
+      .catch(function () { note('Delete didn\u2019t work — check your token and try again.'); });
+  });
+})();
+</script>
+</body>
+</html>

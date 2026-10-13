@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owner Morning Summary — All American Exteriors | BIZHAUS Pilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/pilot.css">
+</head>
+<body>
+<div class="demo-banner">Pilot demo — example business details. Every message below is a draft; nothing is sent.</div>
+<div class="wrap">
+  <header class="site">
+    <div class="wordmark">Morning Summary<small id="bizName">All American Exteriors · prepared by KIARA™</small></div>
+    <span class="ribbon">Owner view</span>
+  </header>
+
+  <p class="eyebrow" style="margin-top:22px">Finished work — approve, edit, or skip</p>
+  <h2 style="font-size:1.7rem">While you were on the roof, the loop kept turning.</h2>
+
+  <div class="counts" id="counts"></div>
+  <div class="note" id="noteBar"></div>
+
+  <h2>Waiting for you</h2>
+  <div id="actions"><p style="color:var(--ink-soft)">Loading…</p></div>
+
+  <h2 style="margin-top:36px">Bookings</h2>
+  <div id="bookings"><p style="color:var(--ink-soft)">Loading…</p></div>
+
+  <p style="margin-top:30px"><a href="/call.html">← Place a test call</a> &nbsp;·&nbsp;
+  <button class="btn skip small" id="resetBtn">Reset demo data</button></p>
+
+  <footer>
+    <p>Powered by Arbor · The Arbor Group · She owns her data.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var countsEl = document.getElementById('counts'), actionsEl = document.getElementById('actions'),
+      bookingsEl = document.getElementById('bookings'), noteEl = document.getElementById('noteBar');
+  var kindLabel = { confirmation:'Confirmation text — drafted', reminder:'Reminder text — drafted',
+                    invoice:'Invoice note — drafted', review:'Review request — drafted' };
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function load(){
+    fetch('/api/owner/summary').then(function(r){ return r.json(); }).then(function(j){
+      var c = j.counts;
+      countsEl.innerHTML =
+        '<div class="count"><b>' + c.calls + '</b><span>Calls answered</span></div>' +
+        '<div class="count"><b>' + c.bookings + '</b><span>Jobs booked</span></div>' +
+        '<div class="count"><b>' + c.jobsDone + '</b><span>Jobs done</span></div>' +
+        '<div class="count"><b>' + c.awaitingApproval + '</b><span>Awaiting you</span></div>';
+      noteEl.innerHTML = '<strong>How sending works:</strong> ' + esc(j.note);
+
+      if (!j.actions.length) {
+        actionsEl.innerHTML = '<p style="color:var(--ink-soft)">Nothing yet — place a <a href="/call.html">test call</a> and KIARA will draft the follow-through here.</p>';
+      } else {
+        actionsEl.innerHTML = '';
+        j.actions.forEach(function(a){
+          var d = document.createElement('div'); d.className = 'action';
+          var decided = a.status !== 'pending';
+          d.innerHTML =
+            '<span class="kind">' + esc(kindLabel[a.kind] || a.kind) + '</span>' +
+            '<span class="pill ' + a.status + '" style="float:right">' + a.status + '</span>' +
+            '<div class="for">For ' + esc(a.forName) + ' · ' + esc(a.forService) + '</div>' +
+            '<div class="text">' + esc(a.text) + '</div>' +
+            '<textarea rows="3">' + esc(a.text) + '</textarea>' +
+            (decided ? '' :
+              '<div class="row">' +
+              '<button class="btn small" data-decide="approve">Approve</button>' +
+              '<button class="btn edit small" data-decide="edit">Edit</button>' +
+              '<button class="btn small saveedit" style="display:none">Save edit &amp; approve</button>' +
+              '<button class="btn skip small" data-decide="skip">Skip</button></div>');
+          var ta = d.querySelector('textarea'), saveBtn = d.querySelector('.saveedit');
+          d.addEventListener('click', function(e){
+            var btn = e.target.closest('[data-decide]'); if (!btn) return;
+            var decision = btn.getAttribute('data-decide');
+            if (decision === 'edit') { ta.style.display = 'block'; saveBtn.style.display = 'inline-block'; ta.focus(); return; }
+            decide(a.id, decision, null);
+          });
+          if (saveBtn) saveBtn.addEventListener('click', function(){ decide(a.id, 'edit', ta.value); });
+          actionsEl.appendChild(d);
+        });
+      }
+
+      if (!j.bookings.length) {
+        bookingsEl.innerHTML = '<p style="color:var(--ink-soft)">No bookings yet.</p>';
+      } else {
+        bookingsEl.innerHTML = '';
+        j.bookings.forEach(function(b){
+          var d = document.createElement('div'); d.className = 'booking';
+          d.innerHTML = '<div><strong>' + esc(b.service) + '</strong> — ' + esc(b.name) +
+            '<small>' + esc(b.slot) + ' · ' + esc(b.address) + ' · ' + esc(b.phone) + ' · status: ' + esc(b.status) + '</small></div>' +
+            (b.status === 'booked' ? '<button class="btn small">Mark job done</button>' : '<span class="pill approved">Done</span>');
+          var btn = d.querySelector('button');
+          if (btn) btn.addEventListener('click', function(){
+            fetch('/api/jobs/' + b.id + '/complete', { method:'POST' }).then(load);
+          });
+          bookingsEl.appendChild(d);
+        });
+      }
+    });
+  }
+
+  function decide(id, decision, text){
+    fetch('/api/owner/actions/' + id + '/decide', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ decision: decision, text: text })
+    }).then(load);
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    fetch('/api/demo/reset', { method:'POST' }).then(load);
+  });
+
+  load();
+})();
+</script>
+</body>
+</html>
